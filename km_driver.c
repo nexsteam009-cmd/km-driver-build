@@ -1,15 +1,8 @@
-// km_driver.c — Kernel driver đọc/ghi memory process khác
+// km_driver.c — Kernel driver doc/ghi memory process khac
 // Build: GitHub Actions + WDK
 
-#include <wdm.h>
 #include <ntddk.h>
 
-// ── Kernel API prototypes — WDK 26100 không export hết ─────────────
-NTKERNELAPI PEPROCESS NTAPI PsGetProcessPeb(_In_ PEPROCESS Process);
-NTKERNELAPI NTSTATUS  NTAPI PsLookupProcessByProcessId(_In_ HANDLE ProcessId, _Outptr_ PEPROCESS *Process);
-NTKERNELAPI PCHAR     NTAPI PsGetProcessImageFileName(_In_ PEPROCESS Process);
-
-// ── Manual PEB / LDR structures ─────────────────────────────────────
 typedef struct _MY_UNICODE_STRING {
     USHORT Length;
     USHORT MaximumLength;
@@ -37,9 +30,9 @@ typedef struct _MY_PEB_LDR_DATA {
 } MY_PEB_LDR_DATA, *PMY_PEB_LDR_DATA;
 
 typedef struct _MY_PEB {
-    BYTE              Reserved1[2];
-    BYTE              BeingDebugged;
-    BYTE              Reserved2[1];
+    UCHAR             Reserved1[2];
+    UCHAR             BeingDebugged;
+    UCHAR             Reserved2[1];
     PVOID             Reserved3[2];
     PMY_PEB_LDR_DATA  Ldr;
     PVOID             ProcessParameters;
@@ -48,13 +41,11 @@ typedef struct _MY_PEB {
 #define DEVICE_NAME     L"\\Device\\PubgExtKM"
 #define SYMLINK_NAME    L"\\DosDevices\\PubgExtKM"
 
-// ── IOCTL codes ─────────────────────────────────────────────────────
 #define IOCTL_READ_MEMORY       CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_WRITE_MEMORY      CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_GET_PID           CTL_CODE(FILE_DEVICE_UNKNOWN, 0x802, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_GET_BASE_ADDR     CTL_CODE(FILE_DEVICE_UNKNOWN, 0x803, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
-// ── Request structs ─────────────────────────────────────────────────
 typedef struct _MEMORY_REQUEST {
     ULONG     ProcessId;
     ULONG     _pad;
@@ -76,7 +67,6 @@ typedef struct _GET_PID_REQUEST {
     ULONG     ProcessId;
 } GET_PID_REQUEST, *PGET_PID_REQUEST;
 
-// ── Đọc memory process ──────────────────────────────────────────────
 static NTSTATUS ReadProcessMemory(
     ULONG ProcessId,
     ULONGLONG Address,
@@ -115,7 +105,6 @@ static NTSTATUS ReadProcessMemory(
     return Status;
 }
 
-// ── Ghi memory process ──────────────────────────────────────────────
 static NTSTATUS WriteProcessMemory(
     ULONG ProcessId,
     ULONGLONG Address,
@@ -154,7 +143,6 @@ static NTSTATUS WriteProcessMemory(
     return Status;
 }
 
-// ── So sánh chuỗi ───────────────────────────────────────────────────
 static BOOLEAN StrEqIA(const char* a, const char* b)
 {
     while (*a && *b) {
@@ -167,7 +155,6 @@ static BOOLEAN StrEqIA(const char* a, const char* b)
     return (*a == 0 && *b == 0);
 }
 
-// ── Lấy PID theo tên ────────────────────────────────────────────────
 static NTSTATUS GetProcessIdByName(const WCHAR* WideName, PULONG OutPid)
 {
     char targetAscii[64] = { 0 };
@@ -183,7 +170,7 @@ static NTSTATUS GetProcessIdByName(const WCHAR* WideName, PULONG OutPid)
         NTSTATUS Status = PsLookupProcessByProcessId((HANDLE)(ULONG_PTR)pid, &Process);
         if (!NT_SUCCESS(Status)) continue;
 
-        PCHAR imageName = PsGetProcessImageFileName(Process);
+        PCHAR imageName = (PCHAR)PsGetProcessImageFileName(Process);
         if (imageName && StrEqIA(imageName, targetAscii)) {
             foundPid = pid;
             found = TRUE;
@@ -199,7 +186,6 @@ static NTSTATUS GetProcessIdByName(const WCHAR* WideName, PULONG OutPid)
     return STATUS_NOT_FOUND;
 }
 
-// ── Lấy base module ─────────────────────────────────────────────────
 static NTSTATUS GetModuleBase(
     ULONG ProcessId,
     const WCHAR* ModuleName,
@@ -266,7 +252,6 @@ static NTSTATUS GetModuleBase(
     return Status;
 }
 
-// ── IOCTL dispatcher ────────────────────────────────────────────────
 static NTSTATUS DispatchIoctl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 {
     UNREFERENCED_PARAMETER(DeviceObject);
@@ -353,7 +338,6 @@ static NTSTATUS DispatchIoctl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
     return Status;
 }
 
-// ── Create / Close ──────────────────────────────────────────────────
 static NTSTATUS DispatchCreateClose(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 {
     UNREFERENCED_PARAMETER(DeviceObject);
@@ -363,7 +347,6 @@ static NTSTATUS DispatchCreateClose(PDEVICE_OBJECT DeviceObject, PIRP Irp)
     return STATUS_SUCCESS;
 }
 
-// ── DriverUnload ────────────────────────────────────────────────────
 static VOID DriverUnload(PDRIVER_OBJECT DriverObject)
 {
     UNICODE_STRING symlink;
@@ -376,7 +359,6 @@ static VOID DriverUnload(PDRIVER_OBJECT DriverObject)
     DbgPrint("[PubgExtKM] Driver unloaded.\n");
 }
 
-// ── DriverEntry ─────────────────────────────────────────────────────
 NTSTATUS DriverEntry(
     PDRIVER_OBJECT  DriverObject,
     PUNICODE_STRING RegistryPath)

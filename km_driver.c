@@ -1,9 +1,12 @@
 // km_driver.c — Kernel driver đọc/ghi memory process khác
 // Build: GitHub Actions + WDK
-#define _NTDDK_
-#define _KERNEL_MODE
+
 #include <ntddk.h>
 
+// ── Kernel API prototypes — WDK 26100 không export hết ─────────────
+NTKERNELAPI PEPROCESS NTAPI PsGetProcessPeb(_In_ PEPROCESS Process);
+NTKERNELAPI NTSTATUS  NTAPI PsLookupProcessByProcessId(_In_ HANDLE ProcessId, _Outptr_ PEPROCESS *Process);
+NTKERNELAPI PCHAR     NTAPI PsGetProcessImageFileName(_In_ PEPROCESS Process);
 
 // ── Manual PEB / LDR structures ─────────────────────────────────────
 typedef struct _MY_UNICODE_STRING {

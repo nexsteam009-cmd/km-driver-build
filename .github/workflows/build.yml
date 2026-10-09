@@ -1,4 +1,4 @@
-name: Build km_driver
+name: BuildDriver
 
 on:
   push:
@@ -9,10 +9,10 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect WDK version
+      - name: Detect WDK
         id: wdk
         shell: powershell
         run: |
@@ -20,47 +20,30 @@ jobs:
           foreach ($p in $paths) {
             $ntifs = Join-Path $p.FullName "km\ntifs.h"
             if (Test-Path $ntifs) {
-              Write-Host "WDK found: $($p.Name)"
               echo "WDK_VER=$($p.Name)" >> $env:GITHUB_OUTPUT
               break
             }
           }
 
-      - name: Setup MSVC environment
+      - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
-      - name: Compile km_driver.c
+      - name: Compile
         shell: cmd
         run: |
           set WDK_VER=${{ steps.wdk.outputs.WDK_VER }}
-          echo WDK version: %WDK_VER%
           set WDK_INC=C:\Program Files (x86)\Windows Kits\10\Include\%WDK_VER%
           set WDK_LIB=C:\Program Files (x86)\Windows Kits\10\Lib\%WDK_VER%
 
-          echo === Verify ntddk.h exists ===
-          dir "%WDK_INC%\km\ntddk.h"
+          cl.exe /TC /nologo /c /O2 /GS- /W3 /D_AMD64_ /D_WIN64 /D_KERNEL_MODE /DPOOL_NX_OPTIN=1 /I"%WDK_INC%\km" /I"%WDK_INC%\km\crt" /I"%WDK_INC%\shared" km_driver.c
 
-          echo === Compiling ===
-          cl.exe /TC /nologo /c /O2 /GS- /W3 ^
-            /D_AMD64_ /D_WIN64 /D_KERNEL_MODE ^
-            /DPOOL_NX_OPTIN=1 ^
-            /I"%WDK_INC%\km" ^
-            /I"%WDK_INC%\km\crt" ^
-            /I"%WDK_INC%\shared" ^
-            km_driver.c
+          link.exe /nologo /DRIVER /SUBSYSTEM:NATIVE /ENTRY:DriverEntry /OUT:km_driver.sys /LIBPATH:"%WDK_LIB%\km\x64" /LIBPATH:"%WDK_LIB%\km\x64\crt" ntoskrnl.lib hal.lib wdmsec.lib BufferOverflowK.lib km_driver.obj
 
-          echo === Linking ===
-          link.exe /nologo /DRIVER /SUBSYSTEM:NATIVE /ENTRY:DriverEntry /OUT:km_driver.sys ^
-            /LIBPATH:"%WDK_LIB%\km\x64" ^
-            /LIBPATH:"%WDK_LIB%\km\x64\crt" ^
-            ntoskrnl.lib hal.lib wdmsec.lib BufferOverflowK.lib km_driver.obj
-
-          echo === Result ===
           dir km_driver.sys
 
-      - name: Upload km_driver.sys
+      - name: Upload
         if: success()
         uses: actions/upload-artifact@v4
         with:

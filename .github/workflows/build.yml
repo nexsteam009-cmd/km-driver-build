@@ -39,14 +39,13 @@ jobs:
           set WDK_INC=C:\Program Files (x86)\Windows Kits\10\Include\%WDK_VER%
           set WDK_LIB=C:\Program Files (x86)\Windows Kits\10\Lib\%WDK_VER%
 
-          echo === Verify ntddk.h ===
+          echo === Verify ntddk.h exists ===
           dir "%WDK_INC%\km\ntddk.h"
 
           echo === Compiling ===
           cl.exe /TC /nologo /c /O2 /GS- /W3 ^
-            /D_AMD64_ /D_WIN64 /D_NTDDK_ /D_KERNEL_MODE ^
+            /D_AMD64_ /D_WIN64 /D_KERNEL_MODE ^
             /DPOOL_NX_OPTIN=1 ^
-            /FI"%WDK_INC%\km\ntddk.h" ^
             /I"%WDK_INC%\km" ^
             /I"%WDK_INC%\km\crt" ^
             /I"%WDK_INC%\shared" ^

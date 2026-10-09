@@ -1,6 +1,7 @@
 // km_driver.c — Kernel driver đọc/ghi memory process khác
 // Build: GitHub Actions + WDK
 
+#include <wdm.h>
 #include <ntddk.h>
 
 // ── Kernel API prototypes — WDK 26100 không export hết ─────────────
